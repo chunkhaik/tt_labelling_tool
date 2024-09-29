@@ -4,6 +4,18 @@ import json
 import gradio as gr
 from utils.handle_video import show_video_frame, get_current_frame, scale_video
 
+widget_configs = [
+    # {"type": "textbox", "label": "Frame Number", "visible": True, "interactive": False},
+    {"type": "radio", "label": "Court Position", "options": ["far-left", "far-middle", "far-right", "near-left", "near-middle", "near-right"]},
+    {"type": "radio", "label": "Side", "options": ["Forehand", "Backhand"]},
+    {"type": "radio", "label": "Shot Type", "options": ["serve", "drive", "drop", "top-spin", "lob", "smash"]},
+    {"type": "radio", "label": "Shot Direction", "options": ["T", "W", "CC", "DL", "DM"]},
+    {"type": "radio", "label": "Outcome", "options": ["in", "winner", "err"]},
+    # {"type": "textbox", "label": "Player Coordinates", "visible": False}
+]
+
+PLAYER_COUNT = 3
+
 class LabelPage:
     def __init__(self, visible=True):
         self.prev_page = None
@@ -12,26 +24,11 @@ class LabelPage:
         self.total_frames = None
         self.net = None
         self.events = []
-        self.player_names = {"p1": None, "p2": None}
-        self.label_page, self.current_frame, self.slider, self.label_button, self.delete_button, self.event_list, self.labels, self.players = self.label_page(visible=visible)
+        self.label_page, self.current_frame, self.slider, self.label_button, self.delete_button, self.event_list, self.labels = self.label_page(visible=visible)
         
     def label_page(self, visible=True):
         label_page = gr.Group(visible=visible)
         with label_page:
-            with gr.Row(): gr.Markdown(""" ## Player Description""", elem_classes="column-container")
-            
-            # Player description
-            with gr.Row():
-                with gr.Column(elem_classes="column-container"):
-                    p1 = gr.Textbox(label="Player 1", placeholder="Enter P1 Description", interactive=True)
-                    p2 = gr.Textbox(label="Player 2", placeholder="Enter P2 Description", interactive=True)
-                
-                # with gr.Column(elem_classes="column-container"):
-                #     p3 = gr.Textbox(label="Player 3", placeholder="Enter P3 Description", interactive=True)
-                #     p4 = gr.Textbox(label="Player 4", placeholder="Enter P4 Description", interactive=True)
-                
-            players = [p1, p2]
-    
             # Labeling Information
             with gr.Row():
                 with gr.Column(scale=2, elem_classes="column-container"):
@@ -63,8 +60,7 @@ class LabelPage:
                         gr.Markdown(""" ## Event Labeling""")
                     with gr.Row():
                         labeled_frame_number = gr.Textbox(label="Frame Number", visible=True, interactive=False)
-                    # with gr.Row():
-                    #     player = gr.Radio(["P1", "P2"], label="Player", interactive=True)
+                    
                     with gr.Row():
                         court_position = gr.Radio(["far-left", "far-middle", "far-right", "near-left", "near-middle", "near-right"], label="Court Position", interactive=True)
                     with gr.Row():
@@ -93,10 +89,6 @@ class LabelPage:
             save_status = gr.Textbox(label="Save Status", value="Not Saved")
             self.prev_page_button = gr.Button("Back to Net", visible=False)
             
-            # Player Description Update
-            for i, player in enumerate(players):
-                    player.change(self.update_player, inputs=[player, gr.Number(value=i+1, visible=False)], outputs=[event_list, save_status])
-            
             # Slider update
             slider.release(self.update_frame, inputs=[slider], outputs=[current_frame, slider]) # set up slider to update frame
             
@@ -122,7 +114,7 @@ class LabelPage:
             save_button.click(self.save_labels, inputs=[event_list], outputs=[save_status])
             delete_button.click(self.delete_event, inputs=[slider], outputs=[event_list, save_status])
             
-        return label_page, current_frame, slider, label_button, delete_button, event_list, labels, players
+        return label_page, current_frame, slider, label_button, delete_button, event_list, labels
 
     def setup_prev_page_button(self, label_net_page):
         self.prev_page = label_net_page
@@ -198,7 +190,6 @@ class LabelPage:
         current_video_id = self.prev_page.video_path.split("/")[-1].split(".")[0]
         events_json = json.dumps({"video_id": current_video_id, 
                                   "total_frames": self.total_frames, 
-                                  "player_descriptions": self.player_names,
                                   "events": self.events}, indent=2)
         return gr.update(value=events_json, language="json"), gr.update(value="Labelled events not updated")
     
@@ -208,8 +199,7 @@ class LabelPage:
         existing_event_index = next((index for (index, d) in enumerate(self.events) if d["frame"] == str(slider)), None)
         if existing_event_index is None: gr.Warning(f"Frame {slider} is not labelled"); return gr.update(), gr.update()
         self.events.pop(existing_event_index)
-        return self.update_event_list()
-        
+        return self.update_event_list()  
 
     def save_labels(self, event_list):
         if not event_list: gr.Warning("No events to save."); return None
@@ -232,21 +222,15 @@ class LabelPage:
                 with open(file_path, 'r') as f:
                     existing_data = json.load(f)
             else:
-                existing_data = {"video_id": current_video_id, "total_frames": self.total_frames, "player_descriptions": self.player_names, "events": []}
+                existing_data = {"video_id": current_video_id, "total_frames": self.total_frames, "events": []}
             
             self.events = existing_data["events"]
-            self.player_names = existing_data["player_descriptions"]
-            return (gr.update(value=json.dumps(existing_data, indent=2), language="json"), gr.update(value=existing_data["player_descriptions"]["p1"]), 
-                    gr.update(value=existing_data["player_descriptions"]["p2"]))
+            return gr.update(value=json.dumps(existing_data, indent=2), language="json")
         
         except Exception as e:
             gr.Warning(f"Error loading event list: {e}")
             return gr.update(value=None)
-    
-    def update_player(self, player, i):
-        self.player_names[f"p{i}"] = player
-        return self.update_event_list()
-    
+
     def get_court_position(self, x: int, y: int) -> str:
         if y < self.net[1]:
             return 'Far deuce' if x < self.net[0] else 'Far ad'

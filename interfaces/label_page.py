@@ -7,7 +7,7 @@ from utils.handle_video import show_video_frame, get_current_frame, scale_video
 widget_configs = [
     # {"type": "textbox", "label": "Frame Number", "visible": True, "interactive": False},
     {"type": "radio", "label": "Court Position", "options": ["far-left", "far-middle", "far-right", "near-left", "near-middle", "near-right"]},
-    {"type": "radio", "label": "Side", "options": ["Forehand", "Backhand"]},
+    {"type": "radio", "label": "stroke_side", "options": ["Forehand", "Backhand"]},
     {"type": "radio", "label": "Shot Type", "options": ["serve", "drive", "drop", "top-spin", "lob", "smash"]},
     {"type": "radio", "label": "Shot Direction", "options": ["T", "W", "CC", "DL", "DM"]},
     {"type": "radio", "label": "Outcome", "options": ["in", "winner", "err"]},
@@ -62,13 +62,13 @@ class LabelPage:
                         labeled_frame_number = gr.Textbox(label="Frame Number", visible=True, interactive=False)
                     
                     with gr.Row():
-                        court_position = gr.Radio(["far-left", "far-middle", "far-right", "near-left", "near-middle", "near-right"], label="Court Position", interactive=True)
+                        ball_position = gr.Radio(["near-left", "near-middle", "near-right", "far-left", "far-middle", "far-right"], label="Ball Position", interactive=True)
                     with gr.Row():
-                        side = gr.Radio(["Forehand", "Backhand"], label="Side", interactive=True)
+                        stroke_side = gr.Radio(["forehand", "backhand"], label="stroke_side", interactive=True)
                     with gr.Row():
-                        shot_type = gr.Radio(["serve", "drive", "drop", "top-spin", "lob", "smash"], label="Shot Type", interactive=True)
+                        stroke_type = gr.Radio(["serve", "push", "chop", "drive", "block", "smash"], label="Shot Type", interactive=True)
                     with gr.Row():
-                        shot_direction = gr.Radio(["T", "W", "CC", "DL", "DM"], label="Shot Direction", interactive=True)
+                        shot_direction = gr.Radio(["straight-long", "straight-short", "diagonal-long", "diagonal-short"], label="Shot Direction", interactive=True)
                     with gr.Row():
                         outcome = gr.Radio(["in", "winner", "err"], label="Outcome", interactive=True)
                     with gr.Row():
@@ -83,7 +83,7 @@ class LabelPage:
                         save_button = gr.Button("Save Labels")
                     
                     # Store labels here
-                    labels = [court_position, side, shot_type, shot_direction, outcome, player_coordinates, labeled_frame_number]
+                    labels = [ball_position, stroke_side, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number]
             
             event_list = gr.Code(value=None, label="Labeled Events", language="json", interactive=False)
             save_status = gr.Textbox(label="Save Status", value="Not Saved")
@@ -109,7 +109,7 @@ class LabelPage:
             skip_10s.click(self.skip_seconds, inputs = [gr.Number(10, visible=False), slider], outputs=[current_frame, slider])
             
             # Labeling
-            current_frame.select(self.handle_image_click, inputs=[slider], outputs=[court_position, player_coordinates, labels[-1]])
+            current_frame.select(self.handle_image_click, inputs=[slider], outputs=[ball_position, player_coordinates, labels[-1]])
             label_button.click(self.label_event, inputs=labels, outputs=[event_list, save_status] + labels)
             save_button.click(self.save_labels, inputs=[event_list], outputs=[save_status])
             delete_button.click(self.delete_event, inputs=[slider], outputs=[event_list, save_status])
@@ -146,16 +146,16 @@ class LabelPage:
         except Exception as e:
             gr.Warning(f"Encountered an error while skipping frames: {e}")
     
-    def label_event(self, court_position, side, shot_type, shot_direction, outcome, player_coordinates, labeled_frame_number):
+    def label_event(self, ball_position, stroke_side, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number):
         # if not player: gr.Warning("Please select a player."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
-        if not court_position: gr.Warning("Please select a court position."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
-        if not side: gr.Warning("Please select a side."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
-        if not shot_type: gr.Warning("Please select a shot type."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        if not ball_position: gr.Warning("Please select a court position."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        if not stroke_side: gr.Warning("Please select a stroke_side."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        if not stroke_type: gr.Warning("Please select a shot type."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not shot_direction: gr.Warning("Please select a shot direction."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not outcome: gr.Warning("Please select an outcome."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not player_coordinates or labeled_frame_number is None: gr.Warning("Please click the player on the image (hit coordinates)"); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
 
-        coarse_label = f"{court_position.lower().replace(' ', '_')}_{side.lower()}_{shot_type.lower()}_{shot_direction.lower()}_{outcome.lower()}"
+        coarse_label = f"{ball_position.lower().replace(' ', '_')}_{stroke_side.lower()}_{stroke_type.lower()}_{shot_direction.lower()}_{outcome.lower()}"
     
         # Check if there's an existing event for this frame
         existing_event_index = next((index for (index, d) in enumerate(self.events) if d["frame"] == labeled_frame_number), None)
@@ -231,7 +231,7 @@ class LabelPage:
             gr.Warning(f"Error loading event list: {e}")
             return gr.update(value=None)
 
-    def get_court_position(self, x: int, y: int) -> str:
+    def get_ball_position(self, x: int, y: int) -> str:
         if y < self.net[1]:
             return 'Far deuce' if x < self.net[0] else 'Far ad'
         else:
@@ -243,7 +243,7 @@ class LabelPage:
                 gr.Warning("Please click on the video frame.")
                 return None, None
             x, y = evt.index
-            court_pos = self.get_court_position(x, y)
+            court_pos = self.get_ball_position(x, y)
             return gr.update(value=court_pos), gr.update(value=[x, y]), gr.update(value=slider)
         
         except Exception as e:

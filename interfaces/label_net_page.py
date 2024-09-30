@@ -63,10 +63,9 @@ class LabelNetPage:
         )
 
     def show_label_page(self):
-        # handle net = [-1, -1]
-        if self.net[0] == -1 or self.net[1] == -1:
-            gr.Warning("Please select a valid net position.")
-            return None, None, None, None
+        # if self.net[0] == -1 or self.net[1] == -1:
+        #     gr.Warning("Please select a valid net position.")
+        #     return None, None, None, None
         
         video, total_frames = load_video(self.video_path)
         current_frame = get_current_frame(video, 0)

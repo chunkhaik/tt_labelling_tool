@@ -64,7 +64,9 @@ class LabelPage:
                     with gr.Row():
                         ball_position = gr.Radio(["near-left", "near-middle", "near-right", "far-left", "far-middle", "far-right"], label="Ball Position", interactive=True)
                     with gr.Row():
-                        stroke_side = gr.Radio(["forehand", "backhand"], label="stroke_side", interactive=True)
+                        stroke_side = gr.Radio(["forehand", "backhand"], label="Stroke Side", interactive=True)
+                    with gr.Row():
+                        stroke_spin = gr.Radio(["top", "bottom", "side"], label="Stroke Spin", interactive=True)
                     with gr.Row():
                         stroke_type = gr.Radio(["serve", "push", "chop", "drive", "block", "smash"], label="Shot Type", interactive=True)
                     with gr.Row():
@@ -83,7 +85,7 @@ class LabelPage:
                         save_button = gr.Button("Save Labels")
                     
                     # Store labels here
-                    labels = [ball_position, stroke_side, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number]
+                    labels = [ball_position, stroke_side, stroke_spin, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number]
             
             event_list = gr.Code(value=None, label="Labeled Events", language="json", interactive=False)
             save_status = gr.Textbox(label="Save Status", value="Not Saved")
@@ -146,16 +148,17 @@ class LabelPage:
         except Exception as e:
             gr.Warning(f"Encountered an error while skipping frames: {e}")
     
-    def label_event(self, ball_position, stroke_side, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number):
+    def label_event(self, ball_position, stroke_side, stroke_spin, stroke_type, shot_direction, outcome, player_coordinates, labeled_frame_number):
         # if not player: gr.Warning("Please select a player."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not ball_position: gr.Warning("Please select a court position."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not stroke_side: gr.Warning("Please select a stroke_side."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
+        if not stroke_spin: gr.Warning("Please select a stroke spin."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not stroke_type: gr.Warning("Please select a shot type."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not shot_direction: gr.Warning("Please select a shot direction."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not outcome: gr.Warning("Please select an outcome."); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
         if not player_coordinates or labeled_frame_number is None: gr.Warning("Please click the player on the image (hit coordinates)"); return gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update(), gr.update()
 
-        coarse_label = f"{ball_position.lower().replace(' ', '_')}_{stroke_side.lower()}_{stroke_type.lower()}_{shot_direction.lower()}_{outcome.lower()}"
+        coarse_label = f"{ball_position.lower().replace(' ', '_')}_{stroke_side.lower()}_{stroke_spin.lower()}_{stroke_type.lower()}_{shot_direction.lower()}_{outcome.lower()}"
     
         # Check if there's an existing event for this frame
         existing_event_index = next((index for (index, d) in enumerate(self.events) if d["frame"] == labeled_frame_number), None)
